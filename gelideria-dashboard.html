@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>גולדה זכרון יעקב</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0a0a0f;font-family:'Heebo',sans-serif;direction:rtl;color:#f1f5f9;overscroll-behavior:none;}
+input,button{font-family:'Heebo',sans-serif;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#334155;border-radius:4px;}
+@keyframes slideDown{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes popIn{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+@keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(216,171,96,0.15)}50%{box-shadow:0 0 40px rgba(216,171,96,0.35)}}
+</style>
+</head>
+<body><div id="root"></div>
+<script type="text/babel">
+const {useState,useRef,useEffect}=React;
+
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+const DEFAULT_PIN="1234",DEFAULT_BUDGET=400,PRIZE_SPLIT=[.70,.20,.10];
+const RATING_LABELS={1:"גרוע",2:"חלש",3:"סביר",4:"טוב",5:"מעולה"};
+const RATING_COLORS={1:"#ef4444",2:"#f97316",3:"#fbbf24",4:"#84cc16",5:"#22c55e"};
+const GOLD="#d8ab60",GOLD2="#f0c878",DARK="#0a0a0f",CARD="rgba(255,255,255,0.04)",BORDER="rgba(255,255,255,0.08)";
+const DAYS=["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
+const EMPLOYEES_NAMES=["מיה כהן","יוסי לוי","נועה גרין","אדם שפיר","—"];
+
+// ── CHECKLISTS ────────────────────────────────────────────────────────────────
+const CHECKLISTS={
+  morning:{label:"☀️ בוקר",color:"#fbbf24",sections:[
+    {title:"פתיחת המקום (עד 09:00)",items:["כניסה למערכת השעות","הדלקת אורות ומוזיקה","הוצאת שולחנות 2 מכל צד, פח, מתקן מים לכלב","טיטוא יסודי רצפת הרחבה — דגש על בדלי סיגריות וסידור כיסאות"]},
+    {title:"מכונות ומוצרים",items:["טעימת הקצפת — לוודא כמות מספקת","פתיחת קארפים","הדלקת מכונת אייס קפה (L2 חלב, L2 מים, שקית אייס קפה)","וידוא תפוזים במכונה","הדלקת מטחנת קפה + הורדת מנת קפה (מסיר שומנים מהסגירה)","הדלקת תנור עוגיות 165° — לפתוח/לסגור בצפצוף","אפייה ראשונית — 2 עוגיות מכל סוג","הדלקת יוגורט — Stop → reset → pumpX2 → ice cream","הדלקת מכונות וופל + קרפ","מעבר כל חלונות החנות"]},
+    {title:"יוגורט ותוספות (עד 9:30)",items:["מילוי ופיפו לכל התוספות, הקערות והקארפים","בדיקת קופסאות תוספות במקרר, מילוי לפי הצורך","לדווח אם נגמר משהו בקבוצה"]},
+    {title:"חיתוך פירות",items:["בדיקת טריות + שטיפה בכלור","כף גלזורה על תפוחים — כוס בינונית L5 מים","חיתוך לקוביות, ענבים לרבעים"]},
+    {title:"קבלת סחורה",items:["וידוא סחורה, שקילת פירות, שליחת קבלה בקבוצה"]},
+    {title:"איפוס החנות",items:["שטיפת כלים, ניקוי עמדת קופה משני הצדדים","שפריצר ונייר על מכונת קפה והמגירות","ניקוי ויטרינות — שמנת ואז סורבה","בדיקת מרקמים, גביעים, פחון, מפיות, כוסות","זכוכיות, מעברים, פסי מעלות"]},
+    {title:"הכנות משלוחים",items:["רטבים ארוזים — כמות לפי עומס","גביעים ארוזים — קופסאות 3 ו-6 תוספות","מגשי נייט קוקי (קטנים וגדולים)"]},
+  ]},
+  shift:{label:"🔄 החלפת משמרת",color:"#38bdf8",sections:[
+    {title:"העברת משמרת",items:["קבלת משמרת מילולית מעובד בוקר — מה נעשה ומה צריך לעשות","אם יש עדכונים חדשים — לעדכן את העובד הנכנס"]},
+    {title:"ניקיון ומילוי",items:["כיסאות ושולחנות","מילוי מקרר שתייה לפי הצורך","שטיפת הרצפה","פחים — אם חצי מהפח / יותר מלא","בדיקת וניקיון שירותים — טואלט וצץ רץ מלאים, הכל נקי","ויטרינות מלמעלה ומבחוץ — מילוי כפיות, כוסות, מפיות, ניקוי זכוכית","איפוס יוגורט — עגלה, ויטרינה, שטיפת כלי תוספות","איפוס פס אחורי — סדר וניקיון שיש, מילוי דברים קריטיים","ניקיון עמדת קופה + מילוי מפיות"]},
+  ]},
+  preclose:{label:"🌅 קידום סגירה",color:"#f97316",sections:[
+    {title:"שעה וחצי לפני סגירה",items:["רשימת והבאת חוסרים","סגירת פחי הפס","ארונות — מעבר על נייר תעשייתי וכלי מגבונים","חוסרים אחרונים: שתייה, חלב, גביעים","מילוי סקוויזרים אם מתחת לחצי","מילוי סוכרים בעמדת קפה"]},
+    {title:"שעה לפני סגירה",items:["ניקיון קארפים מבחוץ וסגירתם, שטיפת המגש","הורדה ומילוי ויטרינות מלמעלה","סגירת יוגורט — שלטונים וכפיות → מעמדי תמר → פירות ורטבים","סגירת מכונות יוגורט","מילקשייק, תפוזים, אייס, קפה ומטחנה, נייט קוקי, ברז שוקולד"]},
+    {title:"חצי שעה לפני סגירה",items:["ניקוי כיור לקוחות","סגירת ויטרינות מבפנים","סגירת מטבח סופית","ניילוץ סוכריות צבעוניות","מעבר על כל הכיסאות ושולחנות","סגירת פחי החנות","מילוי שפריצרים וסבונים"]},
+  ]},
+  closing:{label:"🔒 סגירה",color:"#ec4899",sections:[
+    {title:"כללי",items:["וידוא חוסרים לפס + הפשרת עוגיות נייט קוקי","וידוא משימה שבועית","שפריצרים וסבונים מלאים","טיפים חולקו","מסיר שומנים נשפך בתעלות וכיורים","ספירת קופה, דוח Z ובכספת — לוודא כספת נעולה"]},
+    {title:"מטבח ומחסן",items:["מחסן מסודר, כל הסחורה פרוקה (כולל חדר קירור)","מדור אפייה נקי","מטבח נקי — משטחים, כיורים, מדפים, דליים, מקררים, רצפה, ביוב, פחים, ברזים","מכונת קרח נקייה","פינוי זבל וקרטונים","הפשרת בסיסי יוגורט במידת הצורך","לסגור דוד מים"]},
+    {title:"פס",items:["קארפים סגורים ונקיים","משקל נקי","מכונת מילקשייק נקייה מכל צידיה","שיש שמאל ומראת קיר נקיים","מכונת אייס קפה על מצב לילה, מגירת ניקוז נשטפה","מכונת תפוזים נשטפה והורכבה כהלכה","כיור נקי, כלים פוזרו, מתקן ייבוש הפוך","מכונת קפה + מטחנה נקיות, צד קפה נקי ומלא","קרפים עם מים רותחים בסטימרים","תנור עוגיות כבוי ונקי, מגשים נשטפו","שיש ימין נקי","מכונת יוגורט נקייה ועל מצב לילה","סירופים נקיים, יוגורט נסגר כהלכה","משטח, נירוסטות, זכוכיות — כל החורים מלאים","מכונת וופל + קרפ סגורות ונקיות","מגירות החלב מלאות ונקיות","מגירת עוגיות ריקה (בקופסה במקפיא) ונקייה","עמדת קופה נקייה ומלאה","מאפרות + קערת כלב נקיים","ויטרינת שמנת נקייה מבפנים ומלמעלה, מכוונת 14°","ויטרינת סורבה נקייה מבפנים ומלמעלה, מכוונת 14°","ארונות נקיים מבחוץ ומבפנים ומסודרים","רצפת פס נקייה, ביוב נקי, פחי פס נקיים","ניקוי ברזלי מתקני נייר תעשייתי + כלי מגבונים"]},
+    {title:"חנות",items:["שירותים נקיים — אסלה, סבוניות, צץ רץ, נייר, כיורים, מראות","רצפת חנות נקייה","כיסאות, שולחנות, ספסלים נקיים","פחים חיצוניים ובחנות נקיים"]},
+    {title:"חוץ וסיום",items:["ויטרינות חיצוניות — צדדים + החלק השחור התחתון","עמדת קופה + כיסאות + מגדי סוכר נקיים","כיבוי מזגנים ומסך אוויר","מחירון ברחבה חיצונית נקי, קיר GOLDA נקי","לוודא שעובד לא שכח דברים אישיים","מעלות מסודרות, זבל נזרק, חלונות נעולים","סיבוב בדיקה — פס, מטבח, מחסן, כיבוי מוזיקה + אורות"]},
+  ]},
+  weekly:{label:"📅 שבועי",color:"#a78bfa",sections:[
+    {title:"יום א׳",items:["מעבר יסודי על קיר Golda","ניקוי מעל ומתחת למכונת הקפה","ראשי קפה וידיות במסיר שומנים (3 כפיות + מים רותחים)","סקוויזרים מבפנים — שבוע-שבוע עם סקוויזרי מטבח","שטיפת מכונת אייס קפה"]},
+    {title:"יום ב׳",items:["שטיפת השלט הצהוב 'הרצפה רטובה'","שטיפת כל כלי הכפיות, הסוכרים ומחזיקי הגביעים","משימת אבק — מנורות, משקופים, מחירונים, מדפים, ארונות, עציצים, שלטים","הפשרה לסורבה"]},
+    {title:"יום ג׳",items:["מחסן יסודי — שטיפת רצפה, ניקיון מדפים וקירות באקונומי","ניקיון יסודי מכונת וופל בלגי + קרפ (סגירה)","הפשרה לשמנת"]},
+    {title:"יום ד׳",items:["שטיפת מכונת יוגורט (בוקר)","כל מתקני ייבוש כלים וקרשי חיתוך באקונומיקה","מקררי החנות מבפנים עם סקוץ' אקונומיקה","גביעים 5+3"]},
+    {title:"יום ה׳",items:["שטיפת מכונת קצפת + מתכון חדש (L2 שמנת, ml220 חלב, 15 כפות אבקת סוכר)","סידור וניקיון ארונות ומגירות מבפנים","שטיפה מאחורי מכונת יוגורט, ניקוי בריקים והקיר הזהב"]},
+    {title:"יום ש׳",items:["כיסאות ושולחנות בסקוץ' — כולל רגלי שולחנות","בניקיון מקררים/מקפיאים — להקפיד על גומיות!"]},
+  ]},
+};
+
+const VIDEOS=[
+  {id:1,title:"איך לנקות מכונת גלידה",dur:"4:32",cat:"ניקיון",views:89},
+  {id:2,title:"שירות לקוחות מעולה",   dur:"6:15",cat:"שירות", views:134},
+  {id:3,title:"הכנת קרפ וגביע מקצועי",dur:"3:50",cat:"הכנה",  views:67},
+  {id:4,title:"סגירה נכונה של המקום",  dur:"8:00",cat:"סגירה", views:201},
+  {id:5,title:"טיפול בתלונות לקוחות", dur:"5:20",cat:"שירות", views:78},
+  {id:6,title:"בטיחות מזון ואחסון",   dur:"7:10",cat:"בטיחות",views:112},
+];
+const MESSAGES=[
+  {id:1,from:"מנהל",text:"שבוע הבא תבואו ב-8:30 בימים ד׳-ה׳",time:"לפני שעה",urgent:true},
+  {id:2,from:"מיה", text:"מי מוכן להחליף אותי ביום שישי?",   time:"לפני 3 שעות",urgent:false},
+  {id:3,from:"מנהל",text:"מזל טוב למיה על 1000 נקודות! ✨",   time:"אתמול",urgent:false},
+  {id:4,from:"מנהל",text:"100% בסגירה + תיעוד מלא = בונוס",  time:"לפני יומיים",urgent:false},
+];
+const EMPLOYEES_DEFAULT=[
+  {id:1,name:"מיה כהן",  avatar:"🍦",points:1240,streak:12},
+  {id:2,name:"יוסי לוי", avatar:"🍨",points:980, streak:7},
+  {id:3,name:"נועה גרין",avatar:"🍧",points:860, streak:5},
+  {id:4,name:"אדם שפיר", avatar:"🍡",points:620, streak:3},
+];
+const LEVELS=[
+  {level:1,name:"מוכרנ/ית — רמה 1",min:0,   color:"#94a3b8"},
+  {level:2,name:"מוכרנ/ית — רמה 2",min:300, color:"#38bdf8"},
+  {level:3,name:"מוכרנ/ית — רמה 3",min:600, color:"#fbbf24"},
+  {level:4,name:"מוכרנ/ית — רמה 4",min:900, color:"#f97316"},
+  {level:5,name:"מוכרנ/ית — רמה 5",min:1200,color:"#ec4899"},
+];
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function getLevelInfo(pts){
+  const lv=[...LEVELS].reverse().find(l=>pts>=l.min);
+  const nxt=LEVELS.find(l=>l.min>pts);
+  const pct=nxt?((pts-lv.min)/(nxt.min-lv.min))*100:100;
+  return{lv,nxt,pct};
+}
+function formatStamp(ts){
+  if(!ts)return"";
+  const d=new Date(ts);
+  return d.toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit",year:"2-digit"})+" "+
+         d.toLocaleTimeString("he-IL",{hour:"2-digit",minute:"2-digit"});
+}
+function stampImage(dataUrl,ts){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      const c=document.createElement("canvas");
+      c.width=img.width;c.height=img.height;
+      const ctx=c.getContext("2d");ctx.drawImage(img,0,0);
+      const label=formatStamp(ts);
+      const fs=Math.max(16,Math.round(img.width*0.035));
+      ctx.font=`bold ${fs}px monospace`;
+      const pad=10,tw=ctx.measureText(label).width;
+      const bx=img.width-tw-pad*2-8,by=img.height-fs-pad*2-8;
+      ctx.fillStyle="rgba(0,0,0,0.65)";ctx.beginPath();ctx.roundRect(bx,by,tw+pad*2,fs+pad*2,6);ctx.fill();
+      ctx.fillStyle="#fff";ctx.fillText(label,bx+pad,by+fs+pad-2);
+      res(c.toDataURL("image/jpeg",.88));
+    };img.src=dataUrl;
+  });
+}
+function ls(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch{return d;}}
+function ss(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch{}}
+function getWeekDates(){
+  const today=new Date();
+  const day=today.getDay();
+  const sunday=new Date(today);
+  sunday.setDate(today.getDate()-day);
+  return DAYS.map((_,i)=>{const d=new Date(sunday);d.setDate(sunday.getDate()+i);return`${d.getDate()}.${d.getMonth()+1}`;});
+}
+
+// ── UI ATOMS ─────────────────────────────────────────────────────────────────
+function GoldChip({children,color}){
+  return <div style={{borderRadius:20,padding:"4px 12px",fontSize:11,fontWeight:700,background:`${color||GOLD}18`,border:`1px solid ${color||GOLD}44`,color:color||GOLD,letterSpacing:.3}}>{children}</div>;
+}
+function Card({children,style={},onClick}){
+  return <div onClick={onClick} style={{background:"linear-gradient(135deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))",border:`1px solid ${BORDER}`,borderRadius:16,backdropFilter:"blur(10px)",...style}}>{children}</div>;
+}
+function SectionTitle({children,color}){
+  return <div style={{fontSize:12,fontWeight:800,color:color||GOLD,marginBottom:10,padding:"6px 0",borderBottom:`1px solid ${color||GOLD}22`,letterSpacing:.5,textTransform:"uppercase"}}>{children}</div>;
+}
+function RatingBar({value,onChange,size="md"}){
+  const [hover,setHover]=useState(null);
+  const active=hover||value;
+  const sz=size==="sm"?22:32;
+  return <div style={{display:"flex",gap:size==="sm"?3:6,alignItems:"center"}}>
+    {[1,2,3,4,5].map(n=>(
+      <button key={n} onClick={()=>onChange&&onChange(n)}
+        onMouseEnter={()=>onChange&&setHover(n)} onMouseLeave={()=>setHover(null)}
+        style={{width:sz,height:sz,borderRadius:8,border:"none",cursor:onChange?"pointer":"default",
+          background:active>=n?RATING_COLORS[n]+"cc":"rgba(255,255,255,0.07)",
+          color:active>=n?"#fff":"#475569",fontSize:size==="sm"?11:14,fontWeight:700,transition:"all 0.15s"}}>
+        {n}
+      </button>
+    ))}
+    {active&&<span style={{fontSize:size==="sm"?10:12,color:RATING_COLORS[Math.round(active)],fontWeight:700,whiteSpace:"nowrap"}}>{RATING_LABELS[Math.round(active)]}</span>}
+  </div>;
+}
+
+// ── APP ───────────────────────────────────────────────────────────────────────
+function App(){
+  const [tab,setTab]=useState("home");
+  const [myPoints,setMyPoints]=useState(()=>ls("gp_pts",620));
+  const [clPhotos,setClPhotos]=useState(()=>ls("gp_clphotos",{}));
+  const [monthlyEarned,setMonthly]=useState(()=>ls("gp_monthly",110));
+  const [adminOpen,setAdminOpen]=useState(false);
+  const [pinInput,setPinInput]=useState("");
+  const [managerPin,setManagerPin]=useState(()=>ls("gp_pin",DEFAULT_PIN));
+  const [pinError,setPinError]=useState(false);
+  const [showPin,setShowPin]=useState(false);
+  const [vidFilter,setVidFilter]=useState("הכל");
+  const [budget,setBudget]=useState(()=>ls("gp_budget",DEFAULT_BUDGET));
+  const [schedule,setSchedule]=useState(()=>ls("gp_schedule",{})); // {day_shift: name}
+
+  useEffect(()=>ss("gp_pts",myPoints),[myPoints]);
+  useEffect(()=>ss("gp_clphotos",clPhotos),[clPhotos]);
+  useEffect(()=>ss("gp_monthly",monthlyEarned),[monthlyEarned]);
+  useEffect(()=>ss("gp_pin",managerPin),[managerPin]);
+  useEffect(()=>ss("gp_budget",budget),[budget]);
+  useEffect(()=>ss("gp_schedule",schedule),[schedule]);
+
+  const prizes=PRIZE_SPLIT.map(p=>Math.round(budget*p));
+  const board=[...EMPLOYEES_DEFAULT].map(e=>e.id===4?{...e,points:myPoints}:e).sort((a,b)=>b.points-a.points);
+  const myRank=board.findIndex(e=>e.id===4)+1;
+  const {lv,nxt,pct:lvPct}=getLevelInfo(myPoints);
+  const pendingCount=Object.values(clPhotos).filter(p=>p.status==="pending").length;
+
+  function tryOpenAdmin(pin){
+    if(pin===managerPin){setPinInput("");setPinError(false);setShowPin(false);setAdminOpen(true);}
+    else{setPinError(true);setPinInput("");setTimeout(()=>setPinError(false),1200);}
+  }
+  async function submitClPhoto(key,dataUrl){
+    const ts=Date.now();
+    const stamped=await stampImage(dataUrl,ts);
+    setClPhotos(prev=>{const next={...prev,[key]:{url:stamped,status:"pending",timestamp:ts,rating:null}};ss("gp_clphotos",next);return next;});
+  }
+  function adminApprove(key,rating){
+    setClPhotos(prev=>{const next={...prev,[key]:{...prev[key],status:"approved",rating}};ss("gp_clphotos",next);return next;});
+    setMyPoints(p=>{const v=p+rating;ss("gp_pts",v);return v;});
+    setMonthly(m=>{const v=+(m+0.5).toFixed(1);ss("gp_monthly",v);return v;});
+  }
+  function adminReject(key){
+    setClPhotos(prev=>{const next={...prev,[key]:{...prev[key],status:"rejected",rating:null}};ss("gp_clphotos",next);return next;});
+  }
+  function updateSchedule(dayIdx,shift,name){
+    const key=`${dayIdx}_${shift}`;
+    setSchedule(prev=>{const next={...prev,[key]:name};ss("gp_schedule",next);return next;});
+  }
+
+  if(adminOpen) return <AdminPage clPhotos={clPhotos} onApprove={adminApprove} onReject={adminReject}
+    onClose={()=>setAdminOpen(false)} pendingCount={pendingCount}
+    managerPin={managerPin} onChangePin={p=>{setManagerPin(p);ss("gp_pin",p);}}
+    budget={budget} onChangeBudget={b=>{setBudget(b);ss("gp_budget",b);}}
+    prizes={prizes} board={board}/>;
+
+  return <div style={{minHeight:"100vh",background:`radial-gradient(ellipse at 20% 0%,rgba(216,171,96,0.08) 0%,transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(139,92,246,0.08) 0%,transparent 60%),${DARK}`}}>
+
+    {/* HEADER */}
+    <header style={{background:"rgba(10,10,15,0.92)",backdropFilter:"blur(24px)",borderBottom:`1px solid rgba(216,171,96,0.18)`,padding:"0 16px",position:"sticky",top:0,zIndex:100,boxShadow:"0 4px 24px rgba(0,0,0,0.4)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",height:60}}>
+        {/* Logo */}
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:38,height:38,borderRadius:12,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,boxShadow:`0 4px 14px rgba(216,171,96,0.35)`}}>🍦</div>
+          <div>
+            <div style={{fontWeight:900,fontSize:15,letterSpacing:.5,background:`linear-gradient(90deg,${GOLD2},${GOLD})`,WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>גולדה זכרון יעקב</div>
+            <div style={{fontSize:9,color:"#475569",letterSpacing:1,textTransform:"uppercase",marginTop:-1}}>מרכז העובדים</div>
+          </div>
+        </div>
+        {/* Chips */}
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          <GoldChip>⭐ {myPoints}</GoldChip>
+          <GoldChip color="#22c55e">🏅 #{myRank}</GoldChip>
+          <button onClick={()=>{setPinInput("");setShowPin(true);}} style={{background:"rgba(255,255,255,0.04)",border:`1px solid rgba(216,171,96,0.2)`,borderRadius:"50%",width:32,height:32,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,position:"relative"}}>
+            🔐
+            {pendingCount>0&&<span style={{position:"absolute",top:-4,left:-4,width:16,height:16,borderRadius:"50%",background:"#ef4444",color:"#fff",fontSize:9,fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center"}}>{pendingCount}</span>}
+          </button>
+        </div>
+      </div>
+      {/* Level bar */}
+      <div style={{display:"flex",alignItems:"center",gap:10,paddingBottom:10}}>
+        <span style={{fontSize:10,color:lv.color,fontWeight:700,whiteSpace:"nowrap"}}>{lv.name}</span>
+        <div style={{flex:1,background:"rgba(255,255,255,0.06)",borderRadius:10,height:4,overflow:"hidden"}}>
+          <div style={{width:`${lvPct}%`,height:"100%",borderRadius:10,transition:"width 0.6s",background:`linear-gradient(90deg,${lv.color},${GOLD})`}}/>
+        </div>
+        {nxt&&<span style={{fontSize:9,color:"#334155",whiteSpace:"nowrap"}}>{nxt.min-myPoints}⭐</span>}
+      </div>
+    </header>
+
+    {/* PAGES */}
+    <main style={{padding:"0 0 96px",position:"relative",zIndex:1}}>
+      {tab==="home"&&<HomePage setTab={setTab} myRank={myRank} monthlyEarned={monthlyEarned} prizes={prizes} budget={budget} clPhotos={clPhotos}/>}
+      {tab==="checklist"&&<ChecklistPage clPhotos={clPhotos} onSubmit={submitClPhoto}/>}
+      {tab==="shifts"&&<ShiftsPage schedule={schedule} onUpdate={updateSchedule}/>}
+      {tab==="wallet"&&<WalletPage monthlyEarned={monthlyEarned} prizes={prizes} budget={budget}/>}
+      {tab==="videos"&&<VideosPage filter={vidFilter} setFilter={setVidFilter}/>}
+      {tab==="messages"&&<MessagesPage/>}
+      {tab==="leaderboard"&&<LeaderboardPage board={board} prizes={prizes} budget={budget}/>}
+    </main>
+
+    {/* BOTTOM NAV */}
+    <nav style={{position:"fixed",bottom:0,left:0,right:0,zIndex:200,background:"rgba(10,10,15,0.96)",backdropFilter:"blur(24px)",borderTop:`1px solid rgba(216,171,96,0.12)`,display:"flex",justifyContent:"space-around",padding:"8px 0 12px",boxShadow:"0 -8px 30px rgba(0,0,0,0.5)"}}>
+      {[
+        {id:"home",icon:"🏠",label:"בית"},
+        {id:"checklist",icon:"✅",label:"צ׳ק ליסט"},
+        {id:"shifts",icon:"👥",label:"סידור"},
+        {id:"wallet",icon:"💰",label:"ארנק"},
+        {id:"leaderboard",icon:"🏆",label:"דירוג"},
+        {id:"videos",icon:"🎬",label:"הדרכות"},
+        {id:"messages",icon:"💬",label:"הודעות"},
+      ].map(item=>(
+        <button key={item.id} onClick={()=>setTab(item.id)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:2,padding:"2px 6px",borderRadius:10,transform:tab===item.id?"translateY(-4px)":"none",transition:"transform 0.2s"}}>
+          <span style={{fontSize:19}}>{item.icon}</span>
+          <span style={{fontSize:8,fontWeight:tab===item.id?800:400,color:tab===item.id?GOLD:"#334155",letterSpacing:.3}}>{item.label}</span>
+          {tab===item.id&&<div style={{width:20,height:2,borderRadius:2,background:`linear-gradient(90deg,${GOLD},${GOLD2})`}}/>}
+        </button>
+      ))}
+    </nav>
+
+    {/* PIN MODAL */}
+    {showPin&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:900}} onClick={()=>{setShowPin(false);setPinInput("");setPinError(false);}}>
+      <div style={{background:"linear-gradient(135deg,#0f0f18,#1a1a28)",border:`2px solid ${pinError?"rgba(239,68,68,0.6)":`rgba(216,171,96,0.3)`}`,borderRadius:28,padding:"36px 32px",maxWidth:300,width:"90%",boxShadow:`0 24px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(216,171,96,0.05)`,animation:pinError?"shake 0.4s ease":"popIn 0.3s ease"}} onClick={e=>e.stopPropagation()}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:38,marginBottom:10}}>🔐</div>
+          <div style={{fontWeight:900,fontSize:18,color:GOLD,letterSpacing:.5}}>כניסת מנהל</div>
+          <div style={{fontSize:11,color:"#334155",marginTop:4}}>הכנס קוד PIN</div>
+        </div>
+        <div style={{display:"flex",justifyContent:"center",gap:14,marginBottom:24}}>
+          {[0,1,2,3].map(i=><div key={i} style={{width:14,height:14,borderRadius:"50%",background:pinInput.length>i?(pinError?"#ef4444":GOLD):"rgba(255,255,255,0.08)",border:`2px solid ${pinInput.length>i?(pinError?"#ef4444":GOLD):"rgba(255,255,255,0.15)"}`,transition:"all 0.15s"}}/>)}
+        </div>
+        {pinError&&<div style={{textAlign:"center",fontSize:12,color:"#f87171",marginBottom:14,fontWeight:700}}>✗ קוד שגוי</div>}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+          {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((k,i)=>(
+            <button key={i} onClick={()=>{
+              if(k==="⌫"){setPinInput(p=>p.slice(0,-1));}
+              else if(k!==""){const next=pinInput+k;setPinInput(next);if(next.length===4)tryOpenAdmin(next);}
+            }} style={{border:k===""?"none":`1px solid ${BORDER}`,borderRadius:14,padding:"14px 0",background:k===""?"transparent":"rgba(255,255,255,0.04)",color:"#f1f5f9",fontSize:18,fontWeight:700,cursor:k===""?"default":"pointer",transition:"background 0.15s"}}>{k}</button>
+          ))}
+        </div>
+        <button onClick={()=>{setShowPin(false);setPinInput("");setPinError(false);}} style={{width:"100%",marginTop:18,border:`1px solid ${BORDER}`,borderRadius:14,padding:12,background:"transparent",color:"#334155",fontSize:13,cursor:"pointer"}}>ביטול</button>
+      </div>
+    </div>}
+  </div>;
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────────
+function HomePage({setTab,myRank,monthlyEarned,prizes,budget,clPhotos}){
+  const totalItems=Object.values(CHECKLISTS).reduce((s,cl)=>s+cl.sections.reduce((s2,sec)=>s2+sec.items.length,0),0);
+  const approvedTotal=Object.values(clPhotos).filter(p=>p.status==="approved").length;
+  const pendingTotal=Object.values(clPhotos).filter(p=>p.status==="pending").length;
+  const pctTotal=Math.round((approvedTotal/totalItems)*100)||0;
+  const today=new Date().toLocaleDateString("he-IL",{weekday:"long",day:"numeric",month:"long"});
+
+  return <div style={{padding:"20px 16px",animation:"fadeUp 0.4s ease"}}>
+    <div style={{marginBottom:22}}>
+      <div style={{fontSize:12,color:"#475569",letterSpacing:.3}}>{today}</div>
+      <div style={{fontSize:24,fontWeight:900,marginTop:3,letterSpacing:-.3}}>שלום! 👋</div>
+    </div>
+
+    {/* Main checklist card */}
+    <div style={{borderRadius:22,padding:"22px 20px",marginBottom:16,cursor:"pointer",background:`linear-gradient(135deg,rgba(216,171,96,0.15),rgba(216,171,96,0.05))`,border:`1px solid rgba(216,171,96,0.25)`,boxShadow:`0 12px 40px rgba(0,0,0,0.3)`,position:"relative",overflow:"hidden"}} onClick={()=>setTab("checklist")}>
+      <div style={{position:"absolute",top:-20,left:-20,width:120,height:120,borderRadius:"50%",background:"radial-gradient(circle,rgba(216,171,96,0.12),transparent 70%)"}}/>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",position:"relative"}}>
+        <div>
+          <div style={{fontSize:11,color:GOLD,opacity:.8,marginBottom:5,letterSpacing:.5,textTransform:"uppercase",fontWeight:600}}>צ׳ק ליסטים</div>
+          <div style={{fontSize:38,fontWeight:900,color:GOLD,lineHeight:1}}>{pctTotal}%</div>
+          <div style={{fontSize:12,color:"#64748b",marginTop:4}}>{approvedTotal} / {totalItems} אושרו</div>
+          {pendingTotal>0&&<div style={{fontSize:11,background:"rgba(249,115,22,0.15)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:8,padding:"2px 8px",marginTop:6,display:"inline-block",color:"#fb923c"}}>⏳ {pendingTotal} ממתינות</div>}
+        </div>
+        <div style={{fontSize:48}}>✅</div>
+      </div>
+      <div style={{marginTop:16,background:"rgba(255,255,255,0.06)",borderRadius:10,height:6,overflow:"hidden"}}>
+        <div style={{width:`${pctTotal}%`,height:"100%",borderRadius:10,background:`linear-gradient(90deg,${GOLD},${GOLD2})`,transition:"width 0.6s"}}/>
+      </div>
+      <div style={{marginTop:8,fontSize:11,color:GOLD,opacity:.7}}>לחץ לבחירת צ׳ק ליסט ←</div>
+    </div>
+
+    {/* Mini checklist grid */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+      {Object.entries(CHECKLISTS).map(([key,cl])=>{
+        const total=cl.sections.reduce((s,sec)=>s+sec.items.length,0);
+        const approved=cl.sections.reduce((s,sec,si)=>s+sec.items.filter((_,ii)=>clPhotos[`${key}_${si}_${ii}`]?.status==="approved").length,0);
+        const pct=Math.round((approved/total)*100);
+        return <Card key={key} style={{padding:"12px 14px",cursor:"pointer",border:`1px solid ${cl.color}22`}} onClick={()=>setTab("checklist")}>
+          <div style={{fontSize:12,fontWeight:700,marginBottom:8,color:"#f1f5f9"}}>{cl.label}</div>
+          <div style={{background:"rgba(255,255,255,0.06)",borderRadius:8,height:4,overflow:"hidden",marginBottom:5}}>
+            <div style={{width:`${pct}%`,height:"100%",borderRadius:8,background:cl.color,transition:"width 0.5s"}}/>
+          </div>
+          <div style={{fontSize:10,color:cl.color,fontWeight:700}}>{pct}% · {approved}/{total}</div>
+        </Card>;
+      })}
+    </div>
+
+    {/* Quick cards */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+      {[
+        {icon:"💰",title:"ארנק",sub:`₪${monthlyEarned} החודש`,color:"#22c55e",id:"wallet"},
+        {icon:"🏆",title:"דירוג",sub:`מקום #${myRank}`,color:"#f97316",id:"leaderboard"},
+        {icon:"👥",title:"סידור משמרות",sub:"לחץ לעריכה",color:GOLD,id:"shifts"},
+        {icon:"💬",title:"הודעות",sub:"4 חדשות",color:"#ec4899",id:"messages",badge:true},
+      ].map(c=><Card key={c.id} style={{padding:"14px",cursor:"pointer",border:`1px solid ${c.color}22`,position:"relative"}} onClick={()=>setTab(c.id)}>
+        {c.badge&&<div style={{position:"absolute",top:8,left:8,width:8,height:8,borderRadius:"50%",background:"#ef4444"}}/>}
+        <div style={{fontSize:24,marginBottom:8}}>{c.icon}</div>
+        <div style={{fontWeight:700,fontSize:13}}>{c.title}</div>
+        <div style={{fontSize:11,color:c.color,fontWeight:600,marginTop:2}}>{c.sub}</div>
+      </Card>)}
+    </div>
+
+    {/* Prizes */}
+    <Card style={{padding:"16px",border:`1px solid rgba(216,171,96,0.15)`}}>
+      <div style={{fontSize:12,color:GOLD,fontWeight:800,marginBottom:12,letterSpacing:.5}}>🎯 פרסי החודש — תקציב ₪{budget}</div>
+      {["🥇 ראשון","🥈 שני","🥉 שלישי"].map((rank,i)=>(
+        <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13,padding:"7px 0",borderBottom:i<2?`1px solid ${BORDER}`:"none"}}>
+          <span style={{color:"#64748b",fontWeight:600}}>{rank}</span>
+          <span style={{fontWeight:900,fontSize:15,color:[GOLD,"#94a3b8","#d97706"][i]}}>₪{prizes?.[i]??""}</span>
+        </div>
+      ))}
+    </Card>
+  </div>;
+}
+
+// ── SHIFTS PAGE ───────────────────────────────────────────────────────────────
+function ShiftsPage({schedule,onUpdate}){
+  const weekDates=getWeekDates();
+  const [editCell,setEditCell]=useState(null); // {dayIdx,shift}
+  const [selectedName,setSelectedName]=useState(EMPLOYEES_NAMES[0]);
+
+  function openEdit(dayIdx,shift){
+    const key=`${dayIdx}_${shift}`;
+    setSelectedName(schedule[key]||EMPLOYEES_NAMES[0]);
+    setEditCell({dayIdx,shift});
+  }
+  function confirmEdit(){
+    if(!editCell)return;
+    onUpdate(editCell.dayIdx,editCell.shift,selectedName);
+    setEditCell(null);
+  }
+
+  return <div style={{padding:"20px 16px",animation:"fadeUp 0.4s ease"}}>
+    <div style={{fontSize:20,fontWeight:900,marginBottom:4,letterSpacing:-.3}}>👥 סידור משמרות</div>
+    <div style={{fontSize:12,color:"#475569",marginBottom:20}}>לחץ על תא לבחירת עובד</div>
+
+    {/* Table */}
+    <div style={{borderRadius:18,overflow:"hidden",border:`1px solid ${BORDER}`,background:"rgba(255,255,255,0.02)",marginBottom:20}}>
+      {/* Header */}
+      <div style={{display:"grid",gridTemplateColumns:"72px 1fr 1fr",background:`rgba(216,171,96,0.08)`,borderBottom:`1px solid ${BORDER}`}}>
+        <div style={{padding:"10px 12px",fontSize:10,fontWeight:700,color:"#475569",letterSpacing:.5}}>יום</div>
+        <div style={{padding:"10px 8px",fontSize:10,fontWeight:700,color:"#fbbf24",textAlign:"center",borderRight:`1px solid ${BORDER}`,borderLeft:`1px solid ${BORDER}`}}>☀️ בוקר</div>
+        <div style={{padding:"10px 8px",fontSize:10,fontWeight:700,color:"#a78bfa",textAlign:"center"}}>🌙 ערב</div>
+      </div>
+      {DAYS.map((day,di)=>{
+        const morningKey=`${di}_morning`;
+        const eveningKey=`${di}_evening`;
+        const morning=schedule[morningKey];
+        const evening=schedule[eveningKey];
+        const isToday=new Date().getDay()===di;
+        return <div key={di} style={{display:"grid",gridTemplateColumns:"72px 1fr 1fr",borderBottom:di<6?`1px solid ${BORDER}`:"none",background:isToday?"rgba(216,171,96,0.04)":"transparent"}}>
+          <div style={{padding:"12px 12px",display:"flex",flexDirection:"column",justifyContent:"center"}}>
+            <div style={{fontSize:12,fontWeight:isToday?800:600,color:isToday?GOLD:"#f1f5f9"}}>{day}</div>
+            <div style={{fontSize:10,color:"#334155"}}>{weekDates[di]}</div>
+          </div>
+          {["morning","evening"].map((shift,si)=>{
+            const key=`${di}_${shift}`;
+            const val=schedule[key];
+            const isEmpty=!val||val==="—";
+            return <div key={shift} style={{padding:"10px 8px",borderRight:si===0?`1px solid ${BORDER}`:"none",borderLeft:si===0?`1px solid ${BORDER}`:"none",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",background:editCell?.dayIdx===di&&editCell?.shift===shift?"rgba(216,171,96,0.08)":"transparent",transition:"background 0.15s"}}
+              onClick={()=>openEdit(di,shift)}>
+              <div style={{textAlign:"center"}}>
+                {isEmpty
+                  ? <div style={{fontSize:11,color:"#334155",border:`1px dashed #334155`,borderRadius:8,padding:"4px 10px"}}>+ בחר</div>
+                  : <div style={{fontSize:12,fontWeight:700,color:si===0?"#fbbf24":"#a78bfa",background:si===0?"rgba(251,191,36,0.1)":"rgba(167,139,250,0.1)",borderRadius:8,padding:"4px 10px"}}>{val}</div>
+                }
+              </div>
+            </div>;
+          })}
+        </div>;
+      })}
+    </div>
+
+    {/* Legend */}
+    <Card style={{padding:"14px 16px"}}>
+      <div style={{fontSize:11,color:GOLD,fontWeight:700,marginBottom:10,letterSpacing:.5}}>👤 עובדים</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+        {EMPLOYEES_DEFAULT.map(e=><div key={e.id} style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER}`,borderRadius:10,padding:"5px 10px"}}>
+          <span style={{fontSize:16}}>{e.avatar}</span>
+          <span style={{fontSize:12,color:"#94a3b8"}}>{e.name}</span>
+        </div>)}
+      </div>
+    </Card>
+
+    {/* Edit modal */}
+    {editCell&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",backdropFilter:"blur(6px)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:800,padding:"0 0 96px"}} onClick={()=>setEditCell(null)}>
+      <div style={{background:"linear-gradient(135deg,#0f0f18,#1a1a28)",border:`1px solid rgba(216,171,96,0.2)`,borderRadius:"24px 24px 20px 20px",padding:"24px 20px",width:"100%",maxWidth:480,animation:"popIn 0.25s ease"}} onClick={e=>e.stopPropagation()}>
+        <div style={{fontSize:14,fontWeight:800,color:GOLD,marginBottom:16}}>
+          בחר עובד — {DAYS[editCell.dayIdx]} {editCell.shift==="morning"?"☀️ בוקר":"🌙 ערב"}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+          {[...EMPLOYEES_DEFAULT.map(e=>e.name),"—"].map(name=>(
+            <button key={name} onClick={()=>setSelectedName(name)} style={{display:"flex",alignItems:"center",gap:12,border:`1px solid ${selectedName===name?GOLD:BORDER}`,borderRadius:12,padding:"12px 14px",background:selectedName===name?"rgba(216,171,96,0.1)":"rgba(255,255,255,0.03)",cursor:"pointer",transition:"all 0.15s"}}>
+              <span style={{fontSize:20}}>{EMPLOYEES_DEFAULT.find(e=>e.name===name)?.avatar||"—"}</span>
+              <span style={{fontSize:14,fontWeight:selectedName===name?700:400,color:selectedName===name?GOLD:"#94a3b8"}}>{name}</span>
+              {selectedName===name&&<span style={{marginRight:"auto",color:GOLD,fontWeight:700}}>✓</span>}
+            </button>
+          ))}
+        </div>
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={()=>setEditCell(null)} style={{flex:1,border:`1px solid ${BORDER}`,borderRadius:12,padding:12,background:"transparent",color:"#475569",cursor:"pointer",fontSize:13}}>ביטול</button>
+          <button onClick={confirmEdit} style={{flex:2,border:"none",borderRadius:12,padding:12,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#000",fontWeight:800,cursor:"pointer",fontSize:14}}>אישור</button>
+        </div>
+      </div>
+    </div>}
+  </div>;
+}
+
+// ── CHECKLIST PAGE ────────────────────────────────────────────────────────────
+function ChecklistPage({clPhotos,onSubmit}){
+  const [selected,setSelected]=useState(null);
+
+  if(!selected){
+    return <div style={{padding:"20px 16px",animation:"fadeUp 0.4s ease"}}>
+      <div style={{fontSize:20,fontWeight:900,marginBottom:4,letterSpacing:-.3}}>✅ צ׳ק ליסטים</div>
+      <div style={{fontSize:12,color:"#475569",marginBottom:20}}>בחר סוג משמרת</div>
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {Object.entries(CHECKLISTS).map(([key,cl])=>{
+          const total=cl.sections.reduce((s,sec)=>s+sec.items.length,0);
+          const approved=cl.sections.reduce((s,sec,si)=>s+sec.items.filter((_,ii)=>clPhotos[`${key}_${si}_${ii}`]?.status==="approved").length,0);
+          const pending=cl.sections.reduce((s,sec,si)=>s+sec.items.filter((_,ii)=>clPhotos[`${key}_${si}_${ii}`]?.status==="pending").length,0);
+          const pct=Math.round((approved/total)*100);
+          return <Card key={key} style={{padding:"16px 18px",cursor:"pointer",border:`1px solid ${cl.color}25`}} onClick={()=>setSelected(key)}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div style={{fontWeight:800,fontSize:16}}>{cl.label}</div>
+              <div style={{fontWeight:900,fontSize:22,color:cl.color}}>{pct}%</div>
+            </div>
+            <div style={{background:"rgba(255,255,255,0.06)",borderRadius:10,height:5,overflow:"hidden",marginBottom:8}}>
+              <div style={{width:`${pct}%`,height:"100%",borderRadius:10,background:`linear-gradient(90deg,${cl.color},${cl.color}aa)`,transition:"width 0.5s"}}/>
+            </div>
+            <div style={{display:"flex",gap:10,fontSize:11}}>
+              <span style={{color:"#22c55e",fontWeight:600}}>✓ {approved}</span>
+              {pending>0&&<span style={{color:"#f97316",fontWeight:600}}>⏳ {pending}</span>}
+              <span style={{color:"#334155"}}>{total} פריטים</span>
+              <span style={{color:cl.color,marginRight:"auto",fontWeight:600}}>פתח ←</span>
+            </div>
+          </Card>;
+        })}
+      </div>
+    </div>;
+  }
+
+  const cl=CHECKLISTS[selected];
+  const total=cl.sections.reduce((s,sec)=>s+sec.items.length,0);
+  const approved=cl.sections.reduce((s,sec,si)=>s+sec.items.filter((_,ii)=>clPhotos[`${selected}_${si}_${ii}`]?.status==="approved").length,0);
+  const pct=Math.round((approved/total)*100);
+
+  return <div style={{padding:"20px 16px",animation:"fadeUp 0.4s ease"}}>
+    <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18}}>
+      <button onClick={()=>setSelected(null)} style={{background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:20,padding:"6px 16px",color:"#94a3b8",cursor:"pointer",fontSize:12}}>← חזור</button>
+      <div style={{fontWeight:900,fontSize:18,letterSpacing:-.3}}>{cl.label}</div>
+    </div>
+    <Card style={{padding:"14px 16px",marginBottom:18,border:`1px solid ${cl.color}25`}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:8,fontSize:13,fontWeight:700}}>
+        <span>{pct===100?"🎉 הושלם!":`${approved} / ${total} אושרו`}</span>
+        <span style={{color:cl.color,fontSize:16,fontWeight:900}}>{pct}%</span>
+      </div>
+      <div style={{background:"rgba(255,255,255,0.06)",borderRadius:10,height:6,overflow:"hidden",marginBottom:6}}>
+        <div style={{width:`${pct}%`,height:"100%",borderRadius:10,background:cl.color,transition:"width 0.5s"}}/>
+      </div>
+      <div style={{fontSize:11,color:"#334155"}}>📸 חובה לצלם תמונה לכל פריט — ללא תמונה לא מזוכה</div>
+    </Card>
+    {cl.sections.map((sec,si)=>(
+      <div key={si} style={{marginBottom:20}}>
+        <SectionTitle color={cl.color}>{sec.title}</SectionTitle>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {sec.items.map((item,ii)=>{
+            const key=`${selected}_${si}_${ii}`;
+            return <ClItem key={ii} item={item} photoKey={key} photo={clPhotos[key]} onSubmit={onSubmit} color={cl.color}/>;
+          })}
+        </div>
+      </div>
+    ))}
+  </div>;
+}
+
+function ClItem({item,photoKey,photo,onSubmit,color}){
+  const fileRef=useRef();
+  const [open,setOpen]=useState(false);
+  const st=photo?.status,done=st==="approved";
+  const bg=done?"rgba(22,163,74,0.08)":st==="pending"?"rgba(249,115,22,0.06)":st==="rejected"?"rgba(239,68,68,0.06)":"rgba(255,255,255,0.03)";
+  const br=done?"1px solid rgba(22,163,74,0.25)":st==="pending"?"1px solid rgba(249,115,22,0.2)":st==="rejected"?"1px solid rgba(239,68,68,0.2)":`1px solid ${BORDER}`;
+  function handleFile(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>onSubmit(photoKey,ev.target.result);r.readAsDataURL(file);}
+  return <div style={{borderRadius:12,overflow:"hidden",background:bg,border:br,transition:"all 0.2s"}}>
+    <div style={{padding:"10px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={()=>setOpen(o=>!o)}>
+      <div style={{width:24,height:24,borderRadius:"50%",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:900,color:"#fff",background:done?"#16a34a":st==="pending"?"#f97316":st==="rejected"?"#ef4444":"rgba(255,255,255,0.07)",border:(!st&&!done)?`1.5px solid ${BORDER}`:"none"}}>
+        {done?"✓":st==="pending"?"⏳":st==="rejected"?"✗":""}
+      </div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:12,fontWeight:600,textDecoration:done?"line-through":"none",color:done?"#475569":"#e2e8f0",lineHeight:1.5}}>{item}</div>
+        {st==="pending"&&<div style={{fontSize:10,color:"#fb923c",marginTop:2,fontWeight:600}}>⏳ ממתין לאישור מנהל</div>}
+        {st==="rejected"&&<div style={{fontSize:10,color:"#f87171",marginTop:2,fontWeight:600}}>✗ נדחה — צלם שוב</div>}
+        {done&&photo?.timestamp&&<div style={{fontSize:9,color:"#334155",marginTop:1}}>🕐 {formatStamp(photo.timestamp)}</div>}
+      </div>
+      <span style={{fontSize:10,color:"#334155"}}>{open?"▲":"▼"}</span>
+    </div>
+    {open&&<div style={{padding:"0 14px 14px",borderTop:`1px solid ${BORDER}`}}>
+      {photo?.url&&<img src={photo.url} alt="תיעוד" style={{width:"100%",maxHeight:160,objectFit:"cover",borderRadius:10,marginBottom:10,marginTop:10,border:done?"2px solid rgba(22,163,74,0.35)":st==="rejected"?"2px solid rgba(239,68,68,0.35)":"2px solid rgba(249,115,22,0.35)"}}/>}
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{display:"none"}} onChange={handleFile}/>
+      {!done&&st!=="pending"&&<button onClick={()=>fileRef.current.click()} style={{width:"100%",border:"none",borderRadius:10,padding:12,cursor:"pointer",background:st==="rejected"?`linear-gradient(135deg,#ef4444,#dc2626)`:`linear-gradient(135deg,${color},${color}cc)`,color:"#fff",fontWeight:800,fontSize:12,letterSpacing:.3}}>
+        📸 {st==="rejected"?"צלם מחדש":"צלם תמונה לאישור"}
+      </button>}
+      {st==="pending"&&!done&&<div style={{textAlign:"center",fontSize:11,color:"#fb923c",fontWeight:600,padding:"9px",borderRadius:10,background:"rgba(249,115,22,0.08)",border:"1px solid rgba(249,115,22,0.15)"}}>⏳ ממתין לאישור מנהל</div>}
+    </div>}
+  </div>;
+}
+
+// ── ADMIN ─────────────────────────────────────────────────────────────────────
+function AdminPage({clPhotos,onApprove,onReject,onClose,pendingCount,managerPin,onChangePin,budget,onChangeBudget,prizes,board}){
+  const [filter,setFilter]=useState("pending");
+  const [showPinEdit,setShowPinEdit]=useState(false);
+  const [showBudget,setShowBudget]=useState(false);
+  const [np,setNp]=useState("");
+  const [cp,setCp]=useState("");
+  const [pm,setPm]=useState(null);
+  const [budgetInput,setBudgetInput]=useState(String(budget));
+
+  const allEntries=Object.entries(clPhotos).map(([key,photo])=>{
+    const parts=key.split("_");
+    const type=parts[0],si=parseInt(parts[1]),ii=parseInt(parts[2]);
+    const cl=CHECKLISTS[type];
+    const section=cl?.sections[si];
+    const item=section?.items[ii];
+    return{key,photo,type,clLabel:cl?.label||type,clColor:cl?.color||"#fff",sectionTitle:section?.title||"",item:item||key};
+  }).filter(e=>e.item);
+
+  const shown=allEntries.filter(e=>filter==="all"||e.photo.status===filter);
+  const counts={
+    pending:allEntries.filter(e=>e.photo.status==="pending").length,
+    approved:allEntries.filter(e=>e.photo.status==="approved").length,
+    rejected:allEntries.filter(e=>e.photo.status==="rejected").length,
+  };
+
+  function savePinF(){
+    if(np.length!==4||!/^\d+$/.test(np)){setPm({ok:false,text:"PIN חייב להיות 4 ספרות"});return;}
+    if(np!==cp){setPm({ok:false,text:"הקודים אינם תואמים"});return;}
+    onChangePin(np);setNp("");setCp("");setShowPinEdit(false);
+    setPm({ok:true,text:"✓ PIN עודכן"});setTimeout(()=>setPm(null),2000);
+  }
+  function saveBudgetF(){const v=parseInt(budgetInput);if(!v||v<1)return;onChangeBudget(v);setShowBudget(false);}
+
+  return <div style={{minHeight:"100vh",background:`radial-gradient(ellipse at 20% 0%,rgba(216,171,96,0.06),transparent 60%),${DARK}`}}>
+    <header style={{background:"rgba(10,10,15,0.95)",borderBottom:`1px solid rgba(216,171,96,0.2)`,padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,boxShadow:"0 4px 24px rgba(0,0,0,0.4)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:36,height:36,borderRadius:10,background:`linear-gradient(135deg,${GOLD},${GOLD2})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>👔</div>
+        <div>
+          <div style={{fontWeight:900,fontSize:15,color:GOLD}}>פאנל מנהל</div>
+          <div style={{fontSize:9,color:"#334155",letterSpacing:.5}}>גולדה זכרון יעקב</div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={()=>setShowBudget(v=>!v)} style={{background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:20,padding:"5px 12px",color:"#22c55e",cursor:"pointer",fontSize:11,fontWeight:700}}>💰 תקציב</button>
+        <button onClick={()=>setShowPinEdit(v=>!v)} style={{background:`rgba(216,171,96,0.08)`,border:`1px solid rgba(216,171,96,0.2)`,borderRadius:20,padding:"5px 12px",color:GOLD,cursor:"pointer",fontSize:11,fontWeight:700}}>⚙️ PIN</button>
+        <button onClick={onClose} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${BORDER}`,borderRadius:20,padding:"5px 14px",color:"#475569",cursor:"pointer",fontSize:12}}>✕ יציאה</button>
+      </div>
+    </header>
+    <div style={{padding:16}}>
+      {showBudget&&<Card style={{padding:16,marginBottom:16,border:"1px solid rgba(34,197,94,0.2)"}}>
+        <SectionTitle color="#22c55e">💰 תקציב חודשי</SectionTitle>
+        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:12}}>
+          <input type="number" min="1" value={budgetInput} onChange={e=>setBudgetInput(e.target.value)} style={{flex:1,background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:12,padding:"10px",color:"#f1f5f9",fontSize:22,textAlign:"center",outline:"none",fontFamily:"Heebo,sans-serif"}}/>
+          <span style={{fontSize:20,color:"#22c55e",fontWeight:700}}>₪</span>
+        </div>
+        <div style={{borderRadius:12,padding:"10px 14px",background:"rgba(0,0,0,0.2)",marginBottom:12}}>
+          {["🥇","🥈","🥉"].map((m,i)=>(
+            <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0"}}>
+              <span style={{color:"#64748b"}}>{m} מקום {i+1}</span>
+              <span style={{fontWeight:700,color:[GOLD,"#94a3b8","#d97706"][i]}}>₪{Math.round((parseInt(budgetInput)||0)*PRIZE_SPLIT[i])}</span>
+            </div>
+          ))}
+        </div>
+        <button onClick={saveBudgetF} style={{width:"100%",border:"none",borderRadius:12,padding:12,cursor:"pointer",background:"linear-gradient(135deg,#15803d,#16a34a)",color:"#fff",fontWeight:800,fontSize:13}}>שמור</button>
+      </Card>}
+
+      {showPinEdit&&<Card style={{padding:16,marginBottom:16,border:`1px solid rgba(216,171,96,0.2)`}}>
+        <SectionTitle>🔑 שינוי PIN</SectionTitle>
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <input type="password" inputMode="numeric" maxLength={4} placeholder="PIN חדש" value={np} onChange={e=>setNp(e.target.value.replace(/\D/g,""))} style={{background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:12,padding:12,color:"#f1f5f9",fontSize:20,textAlign:"center",letterSpacing:10,outline:"none",fontFamily:"Heebo,sans-serif"}}/>
+          <input type="password" inputMode="numeric" maxLength={4} placeholder="אשר PIN" value={cp} onChange={e=>setCp(e.target.value.replace(/\D/g,""))} style={{background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:12,padding:12,color:"#f1f5f9",fontSize:20,textAlign:"center",letterSpacing:10,outline:"none",fontFamily:"Heebo,sans-serif"}}/>
+          {pm&&<div style={{fontSize:12,color:pm.ok?"#4ade80":"#f87171",textAlign:"center",fontWeight:700}}>{pm.text}</div>}
+          <button onClick={savePinF} style={{border:"none",borderRadius:12,padding:12,cursor:"pointer",background:`linear-gradient(135deg,${GOLD},${GOLD2})`,color:"#000",fontWeight:800,fontSize:13}}>שמור PIN</button>
+        </div>
+      </Card>}
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}}>
+        {[{label:"ממתינות",count:counts.pending,color:"#f97316"},{label:"אושרו",count:counts.approved,color:"#22c55e"},{label:"נדחו",count:counts.rejected,color:"#ef4444"}].map((s,i)=>(
+          <Card key={i} style={{padding:12,textAlign:"center",border:`1px solid ${s.color}25`}}>
+            <div style={{fontSize:24,fontWeight:900,color:s.color}}>{s.count}</div>
+            <div style={{fontSize:11,color:"#475569"}}>{s.label}</div>
+          </Card>
+        ))}
+      </div>
+
+      <Card style={{padding:"14px 16px",marginBottom:16,border:`1px solid rgba(216,171,96,0.15)`}}>
+        <div style={{fontSize:11,color:GOLD,fontWeight:700,marginBottom:10,letterSpacing:.5}}>🏆 פרסי החודש — תקציב ₪{budget}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+          {["🥇","🥈","🥉"].map((m,i)=>(
+            <div key={i} style={{textAlign:"center",borderRadius:12,padding:10,background:"rgba(0,0,0,0.2)"}}>
+              <div style={{fontSize:20}}>{m}</div>
+              <div style={{fontWeight:900,fontSize:16,color:[GOLD,"#94a3b8","#d97706"][i]}}>₪{prizes[i]}</div>
+              <div style={{fontSize:10,color:"#334155",marginTop:2}}>{board[i]?.name||"???"}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        {[{id:"pending",label:"⏳ ממתינות"},{id:"approved",label:"✓ אושרו"},{id:"rejected",label:"✗ נדחו"},{id:"all",label:"הכל"}].map(f=>(
+          <button key={f.id} onClick={()=>setFilter(f.id)} style={{border:"none",borderRadius:20,padding:"6px 14px",fontSize:11,fontWeight:600,cursor:"pointer",background:filter===f.id?GOLD:"rgba(255,255,255,0.05)",color:filter===f.id?"#000":"#475569",transition:"all 0.2s"}}>{f.label}</button>
+        ))}
+      </div>
+
+      {shown.length===0&&<div style={{textAlign:"center",padding:40,color:"#334155",fontSize:14}}>אין תיעודים בקטגוריה זו</div>}
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {shown.map(e=><AdminPhotoCard key={e.key} entry={e} onApprove={onApprove} onReject={onReject}/>)}
+      </div>
+    </div>
+  </div>;
+}
+
+function AdminPhotoCard({entry,onApprove,onReject}){
+  const [open,setOpen]=useState(true);
+  const [rating,setRating]=useState(entry.photo.rating||null);
+  const st=entry.photo.status;
+  return <Card style={{overflow:"hidden",border:st==="approved"?"1px solid rgba(22,163,74,0.25)":st==="rejected"?"1px solid rgba(239,68,68,0.25)":`1px solid ${entry.clColor}22`}}>
+    <div style={{padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"flex-start",cursor:"pointer",borderBottom:`1px solid ${BORDER}`}} onClick={()=>setOpen(o=>!o)}>
+      <div style={{flex:1}}>
+        <div style={{fontSize:10,color:entry.clColor,fontWeight:700,marginBottom:3,letterSpacing:.3}}>{entry.clLabel} · {entry.sectionTitle}</div>
+        <div style={{fontSize:13,fontWeight:700,color:"#f1f5f9",lineHeight:1.4}}>{entry.item}</div>
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0,marginRight:8}}>
+        <span style={{fontSize:11,fontWeight:700,borderRadius:8,padding:"3px 8px",background:st==="approved"?"rgba(22,163,74,0.15)":st==="rejected"?"rgba(239,68,68,0.15)":"rgba(249,115,22,0.15)",color:st==="approved"?"#4ade80":st==="rejected"?"#f87171":"#fb923c"}}>
+          {st==="approved"?"✓ אושר":st==="rejected"?"✗ נדחה":"⏳"}
+        </span>
+        <span style={{fontSize:10,color:"#334155"}}>{open?"▲":"▼"}</span>
+      </div>
+    </div>
+    {open&&<>
+      <div style={{padding:"6px 14px",background:"rgba(0,0,0,0.2)",fontSize:10,color:"#475569"}}>🕐 {formatStamp(entry.photo.timestamp)}</div>
+      <img src={entry.photo.url} alt="תיעוד" style={{width:"100%",maxHeight:260,objectFit:"cover",display:"block"}}/>
+      <div style={{padding:"14px"}}>
+        <div style={{fontSize:11,color:"#a78bfa",fontWeight:700,marginBottom:10}}>⭐ דרג רמת ביצוע:</div>
+        <RatingBar value={rating} onChange={st!=="approved"?setRating:null}/>
+        {rating&&st!=="approved"&&<div style={{fontSize:11,color:"#475569",marginTop:6}}>ניקוד: <strong style={{color:GOLD}}>{rating}/5</strong></div>}
+      </div>
+      {st==="pending"&&<div style={{padding:"0 14px 14px",display:"flex",gap:10}}>
+        <button onClick={()=>rating&&onApprove(entry.key,rating)} style={{flex:1,border:"none",borderRadius:12,padding:12,cursor:rating?"pointer":"not-allowed",background:rating?"linear-gradient(135deg,#15803d,#16a34a)":"rgba(255,255,255,0.04)",color:rating?"#fff":"#334155",fontWeight:800,fontSize:13}}>
+          {rating?"✓ אשר":"⭐ בחר דירוג"}
+        </button>
+        <button onClick={()=>onReject(entry.key)} style={{flex:1,border:"none",borderRadius:12,padding:12,cursor:"pointer",background:"linear-gradient(135deg,#b91c1c,#ef4444)",color:"#fff",fontWeight:800,fontSize:13}}>✗ דחה</button>
+      </div>}
+      {st!=="pending"&&<div style={{padding:"0 14px 14px",display:"flex",justifyContent:"center"}}>
+        <button onClick={()=>st==="approved"?onReject(entry.key):rating&&onApprove(entry.key,rating)} style={{border:`1px solid ${BORDER}`,borderRadius:12,padding:"8px 20px",background:"transparent",color:"#475569",cursor:"pointer",fontSize:11}}>
+          {st==="approved"?"בטל אישור":"אשר בכל זאת"}
+        </button>
+      </div>}
+    </>}
+  </Card>;
+}
+
+// ── WALLET ────────────────────────────────────────────────────────────────────
+function WalletPage({monthlyEarned,prizes,budget}){
+  return <div style={{padding:"20px 16px",animation:"fadeUp 0.4s ease"}}>
+    <div style={{fontSize:20,fontWeight:900,marginBottom:20,letterSpacing:-.3}}>💰 הארנק שלי</div>
+    <Card style={{padding:24,marginBottom:16,background:`linear-gradient(135deg,rgba(4,120,87,0.3),rgba(6,95,70,0.2))`,border:"1px solid rgba(34,197,94,0.2)",textAlign:"center",boxShadow:"0 12px 40px rgba(0,0,0,0.3)"}}>
+      <div style={{fontSize:12,color:"#6ee7b7",marginBottom:6,letterSpacing:.5}}>צבור החודש</div>
+      <div style={{fontSize:52,fontWeight:900,color:"#fff",lineHeight:1}}>₪{monthlyEarned}</div>
+      <div style={{marginTop:16,background:"rgba(255,255,255,0.1)",borderRadius:10,height:6,overflow:"hidden"}}>
+        <div style={{width:`${Math.min((monthlyEarned/(prizes?.[0]||1))*100,100)}%`,height:"100%",background:"#6ee7b7",borderRadius:10,transition:"width 0.6s"}}/>
+      </div>
+    </Card>
+    <Card style={{padding:"16px 18px",border:`1px solid rgba(216,171,96,0.15)`}}>
+      <div style={{fontSize:12,fontWeight:800,color:GOLD,marginBottom:4,letterSpacing:.5}}>🏆 חלוקת פרסים חודשית</div>
+      <div style={{fontSize:11,color:"#334155",marginBottom:14}}>תקציב: ₪{budget} | חלוקה 70/20/10</div>
+      {["🥇 מקום 1","🥈 מקום 2","🥉 מקום 3"].map((rank,i)=>(
+        <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",fontSize:13,borderBottom:i<2?`1px solid ${BORDER}`:"none"}}>
+          <span style={{color:"#64748b",fontWeight:600}}>{rank}</span>
+          <span style={{fontWeight:900,fontSize:17,color:[GOLD,"#94a3b8","#d97706"][i]}}>₪{prizes?.[i]??""}</span>
+        </div>
+      ))}
+    </Card>
+  </div>;
+}
+
+// ── LEADERBOARD ───────────────────────────────────────────────────────────────
+function LeaderboardPage({board,prizes,budget}){
+  const medals=["🥇","🥈","🥉"];
+  return <div style={{padding:"20px 16px",animation:"fadeUp 0.4s ease"}}>
+    <div style={{fontSize:20,fontWeight:900,marginBottom:4,letterSpacing:-.3}}>🏆 לוח דירוג</div>
+    <div style={{fontSize:12,color:"#475569",marginBottom:16}}>מי האלוף של החודש?</div>
+    <Card style={{padding:14,marginBottom:20,border:`1px solid rgba(216,171,96,0.15)`}}>
+      <div style={{fontSize:11,color:GOLD,fontWeight:700,marginBottom:10,textAlign:"center",letterSpacing:.5}}>תקציב ₪{budget} | חלוקה 70/20/10</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+        {medals.map((m,i)=>(
+          <div key={i} style={{textAlign:"center",borderRadius:12,padding:12,background:"rgba(0,0,0,0.2)"}}>
+            <div style={{fontSize:22}}>{m}</div>
+            <div style={{fontWeight:900,fontSize:16,color:[GOLD,"#94a3b8","#d97706"][i]}}>₪{prizes?.[i]??""}</div>
+            <div style={{fontSize:10,color:"#334155",marginTop:3}}>{board[i]?.name||"???"}</div>
+          </div>
+        ))}
+      </div>
+    </Card>
+    {/* Podium */}
+    <div style={{display:"flex",justifyContent:"center",alignItems:"flex-end",gap:10,marginBottom:24}}>
+      {[1,0,2].map((idx,pos)=>{
+        const emp=board[idx];if(!emp)return null;
+        const h=[92,128,72][pos];const isMine=emp.id===4;
+        return <div key={emp.id} style={{display:"flex",flexDirection:"column",alignItems:"center",width:90}}>
+          <div style={{fontSize:20,marginBottom:2}}>{medals[idx]}</div>
+          <div style={{fontSize:22}}>{emp.avatar}</div>
+          <div style={{fontSize:10,fontWeight:700,textAlign:"center",marginBottom:5,color:isMine?"#ec4899":"#e2e8f0"}}>{emp.name}{isMine?" 👈":""}</div>
+          <div style={{width:"100%",height:h,borderRadius:"10px 10px 0 0",background:idx===0?`linear-gradient(180deg,${GOLD2},${GOLD})`:idx===1?"linear-gradient(180deg,#94a3b8,#64748b)":"linear-gradient(180deg,#d97706,#92400e)",display:"flex",alignItems:"center",justifyContent:"center",color:"#000",fontWeight:900,fontSize:12,boxShadow:idx===0?`0 -4px 20px rgba(216,171,96,0.3)`:"none"}}>{emp.points}⭐</div>
+        </div>;
+      })}
+    </div>
+    <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {board.map((emp,i)=>{
+        const isMine=emp.id===4;
+        return <Card key={emp.id} style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:12,border:isMine?`1px solid rgba(236,72,153,0.3)`:`1px solid ${BORDER}`,background:isMine?"rgba(236,72,153,0.06)":CARD}}>
+          <div style={{fontSize:14,width:28,textAlign:"center",fontWeight:800,color:i<3?[GOLD,"#94a3b8","#d97706"][i]:"#334155"}}>{i<3?medals[i]:`#${i+1}`}</div>
+          <span style={{fontSize:22}}>{emp.avatar}</span>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:13,color:isMine?"#f472b6":"#f1f5f9"}}>{emp.name}{isMine?" (אתה)":""}</div>
+            <div style={{fontSize:10,color:"#475569",marginTop:1}}>🔥 {emp.streak} ימים</div>
+          </div>
+          <div style={{fontWeight:900,fontSize:14,color:GOLD}}>{emp.points}⭐</div>
+        </Card>;
+      })}
+    </div>
+  </div>;
+}
+
+// ── VIDEOS ────────────────────────────────────────────────────────────────────
+function VideosPage({filter,setFilter}){
+  const cats=["הכל",...new Set(VIDEOS.map(v=>v.cat))];
+  const shown=filter==="הכל"?VIDEOS:VIDEOS.filter(v=>v.cat===filter);
+  return <div style={{padding:"20px 16px",animation:"fadeUp 0.4s ease"}}>
+    <div style={{fontSize:20,fontWeight:900,marginBottom:14,letterSpacing:-.3}}>🎬 סרטוני הדרכה</div>
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+      {cats.map(c=><button key={c} onClick={()=>setFilter(c)} style={{border:`1px solid ${filter===c?GOLD:BORDER}`,borderRadius:20,padding:"5px 14px",fontSize:11,fontWeight:600,cursor:"pointer",background:filter===c?`rgba(216,171,96,0.15)`:"transparent",color:filter===c?GOLD:"#475569",transition:"all 0.2s"}}>{c}</button>)}
+    </div>
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      {shown.map(v=><Card key={v.id} style={{overflow:"hidden",display:"flex",alignItems:"center",cursor:"pointer"}}>
+        <div style={{width:80,minHeight:72,flexShrink:0,background:"linear-gradient(135deg,#1e1b4b,#312e81)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>▶️</div>
+        <div style={{padding:"12px 14px",flex:1}}>
+          <div style={{fontWeight:700,fontSize:13,marginBottom:5}}>{v.title}</div>
+          <div style={{display:"flex",gap:10}}>
+            <span style={{fontSize:11,color:"#334155"}}>⏱ {v.dur}</span>
+            <span style={{fontSize:11,color:"#334155"}}>👁 {v.views}</span>
+            <span style={{fontSize:10,borderRadius:8,padding:"2px 8px",fontWeight:600,background:"rgba(139,92,246,0.15)",color:"#a78bfa"}}>{v.cat}</span>
+          </div>
+        </div>
+      </Card>)}
+    </div>
+  </div>;
+}
+
+// ── MESSAGES ──────────────────────────────────────────────────────────────────
+function MessagesPage(){
+  return <div style={{padding:"20px 16px",animation:"fadeUp 0.4s ease"}}>
+    <div style={{fontSize:20,fontWeight:900,marginBottom:18,letterSpacing:-.3}}>💬 הודעות</div>
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
+      {MESSAGES.map(m=><Card key={m.id} style={{padding:"14px 16px",border:m.urgent?"1px solid rgba(239,68,68,0.25)":`1px solid ${BORDER}`,background:m.urgent?"rgba(239,68,68,0.06)":CARD}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
+          <span style={{fontWeight:700,fontSize:12,color:m.urgent?"#f87171":GOLD}}>{m.urgent?"🚨 ":""}{m.from}</span>
+          <span style={{fontSize:10,color:"#334155"}}>{m.time}</span>
+        </div>
+        <div style={{fontSize:13,color:"#cbd5e1",lineHeight:1.6}}>{m.text}</div>
+      </Card>)}
+    </div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
